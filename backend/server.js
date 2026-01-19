@@ -12,7 +12,7 @@ const address=join(dirname(__filename),"..")
 const app=express()
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// const address="/Users/arpityadav/Desktop/project/echotales"
+
 app.use("/address",express.static(address))
 const MONGO_URI=process.env.MONGO_URI
 const PORT=process.env.PORT;
