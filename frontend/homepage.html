@@ -15,7 +15,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@lovable_dev">
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png">
-    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -870,6 +870,28 @@
             font-size: 0.875rem;
             color: var(--muted-foreground);
         }
+        .password-wrapper {
+    position: relative;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #777;
+    display: flex;
+    align-items: center;
+}
+
+.toggle-password:hover {
+    color: #333;
+}
+
+.form-input {
+    padding-right: 44px;
+}
 
         /* Responsive Design */
         @media (max-width: 767px) {
@@ -1185,7 +1207,20 @@
                 
                 <div class="form-group">
                     <label for="loginPassword" class="form-label">Password</label>
-                    <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" required>
+                    <div class="password-wrapper">
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            class="form-input" 
+                            placeholder="Enter your password" 
+                            required
+                        >
+                        <span class="toggle-password" onclick="togglePassword()">
+                            <span id="eyeIcon" class="material-icons-outlined">
+                                visibility
+                            </span>
+                        </span>
+                    </div>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-large form-submit">Sign In</button>
@@ -1469,6 +1504,18 @@ async function handleStoriesClick() {
                 }
             });
         });
+        function togglePassword() {
+    const input = document.getElementById("loginPassword");
+    const icon = document.getElementById("eyeIcon");
+
+    if (input.type === "password") {
+        input.type = "text";
+        icon.textContent = "visibility_off";
+    } else {
+        input.type = "password";
+        icon.textContent = "visibility";
+    }
+}
     </script>
 </body>
 </html>
