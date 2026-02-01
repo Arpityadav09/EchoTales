@@ -93,6 +93,11 @@
             transition: var(--transition-smooth);
             cursor: pointer;
         }
+        .nav-logo {
+
+            color: hsl(from var(--sidebar-foreground) h s l / 0.7);
+            text-decoration: none;
+        }
 
         .nav-item:hover {
             background-color: var(--sidebar-accent);
@@ -561,13 +566,14 @@
     <!-- Header -->
     <header class="header">
         <div class="header-content">
+            <a href="/" class="nav-logo">
             <div class="logo">
                 <div class="logo-icon">
                     <div class="logo-dot"></div>
                 </div>
                 <span class="logo-text">EchoTales</span>
             </div>
-
+            </a>
             <div class="profile-dropdown">
                 <button class="profile-button" onclick="toggleProfileDropdown()">
                     U

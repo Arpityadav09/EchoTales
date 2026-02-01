@@ -513,6 +513,11 @@
             font-size: 0.875rem;
             color: var(--muted-foreground);
         }
+        .nav-logo {
+
+color: hsl(from var(--sidebar-foreground) h s l / 0.7);
+text-decoration: none;
+}
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -589,12 +594,14 @@
     <!-- Header -->
     <header class="header">
         <div class="header-content">
-            <div class="logo">
-                <div class="logo-icon">
-                    <div class="logo-dot"></div>
+            <a href="/" class="nav-logo">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <div class="logo-dot"></div>
+                    </div>
+                    <span class="logo-text">EchoTales</span>
                 </div>
-                <span class="logo-text">EchoTales</span>
-            </div>
+                </a>
 
             <div class="profile-dropdown">
                 <button class="profile-button" onclick="toggleProfileDropdown()">
