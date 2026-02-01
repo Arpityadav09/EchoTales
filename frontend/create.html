@@ -838,6 +838,7 @@ text-decoration: none;
         function viewProfile() {
             showToast('Profile', 'Navigating to your profile...');
             toggleProfileDropdown();
+            window.location.href = '/profile';
         }
 
         async function logout() {
