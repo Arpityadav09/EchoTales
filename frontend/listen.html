@@ -840,84 +840,56 @@
             }
         }
         
-        async function togglePlay() {
-    const playIcon = document.getElementById('playIcon');
-    const storyContent = story?.content;
-
-    // 1. Safety Check: Ensure there is content to read
-    if (!storyContent) {
-        showToast("Error", "Story content not loaded yet. Please wait.");
-        return;
-    }
-
-    if (!isPlaying) {
-        try {
-            // 2. Resume if the audio is already generated but just paused
-            if (audioPlayer && audioPlayer.paused && audioPlayer.readyState > 0) {
-                audioPlayer.play();
-                isPlaying = true;
-                updatePlayIcon(true);
-                return;
-            }
-
-            // 3. New Generation: Call your secure backend
-            showToast("Generating Audio", "Converting story to speech...");
-            
-            const response = await fetch('/api/generate-tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ storyContent })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.details || "Failed to generate audio");
-            }
-
-            const { audioData, mimeType } = await response.json();
-
-            // 4. Extract Sample Rate from MimeType (usually "audio/L16;rate=24000")
-            const rateMatch = mimeType.match(/rate=(\d+)/);
-            const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-
-            // 5. Conversion Pipeline: Base64 -> ArrayBuffer -> Int16 -> WAV Blob
-            const pcmBuffer = base64ToArrayBuffer(audioData);
-            const pcm16 = new Int16Array(pcmBuffer);
-            const wavBlob = pcmToWav(pcm16, sampleRate);
-
-            // 6. Memory Cleanup: Revoke old URL if it exists
-            if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
-            
-            // 7. Create Playable URL and Init Player
-            currentAudioUrl = URL.createObjectURL(wavBlob);
-            audioPlayer = new Audio(currentAudioUrl);
-            
-            audioPlayer.play();
-            isPlaying = true;
-            updatePlayIcon(true);
-
-            // 8. Event Listeners for UI Updates
-            audioPlayer.ontimeupdate = updateProgress;
-            audioPlayer.onended = () => {
-                isPlaying = false;
-                updatePlayIcon(false);
-                showToast("Finished", "Story playback complete.");
-            };
-
-        } catch (err) {
-            console.error("TTS Error:", err);
-            showToast("Error", "Speech synthesis failed: " + err.message);
-            isPlaying = false;
-            updatePlayIcon(false);
-        }
-    } else {
-        // 9. Pause Logic
+       // listen.html - Inside the script tag
+async function togglePlay() {
+    if (isPlaying) {
         if (audioPlayer) audioPlayer.pause();
         isPlaying = false;
         updatePlayIcon(false);
+        return;
+    }
+
+    // If audio is already loaded and just paused, simply resume
+    if (audioPlayer && audioPlayer.paused && audioPlayer.readyState > 0) {
+        audioPlayer.play();
+        isPlaying = true;
+        updatePlayIcon(true);
+        return;
+    }
+
+    try {
+        showToast("Generating Audio", "Converting story to speech...");
+        
+        const response = await fetch('/api/generate-tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ storyContent: story.content })
+        });
+
+        const { audioData, mimeType } = await response.json();
+        
+        // Extract sample rate (usually 24000) from mimeType
+        const sampleRate = 24000; 
+
+        // Convert raw data to playable WAV
+        const pcmBuffer = base64ToArrayBuffer(audioData);
+        const pcm16 = new Int16Array(pcmBuffer);
+        const wavBlob = pcmToWav(pcm16, sampleRate);
+
+        if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl); // Cleanup memory
+        currentAudioUrl = URL.createObjectURL(wavBlob);
+        
+        audioPlayer = new Audio(currentAudioUrl);
+        audioPlayer.play();
+        isPlaying = true;
+        updatePlayIcon(true);
+
+        // Sync progress bar
+        audioPlayer.ontimeupdate = updateProgress;
+    } catch (err) {
+        showToast("Error", "Synthesis failed: " + err.message);
     }
 }
-
 /** Helper to toggle the SVG path of your play/pause button */
 function updatePlayIcon(playing) {
     const playIcon = document.getElementById('playIcon');

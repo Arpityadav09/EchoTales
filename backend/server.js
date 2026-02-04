@@ -271,79 +271,57 @@ app.get("/listen/:id",(req,res)=>{
   res.sendFile(address+"/frontend/listen.html");
 });
 // audio convert
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.5-flash-preview-tts"; 
+// Locate this section in server.js and update it
+const GEMINI_MODEL = "gemini-2.5-flash-preview-tts"; //
 
 app.post("/api/generate-tts", async (req, res) => {
-  if (!req.session?.userId) {
-    return res.status(401).json({ message: "Unauthorized. Please login." });
-  }
+    if (!req.session.userId) return res.status(401).json({ message: "Please login first." });
 
-  const { storyContent } = req.body;
-  if (!storyContent) {
-    return res.status(400).json({ message: "Missing story content." });
-  }
+    const { storyContent } = req.body;
+    if (!storyContent) return res.status(400).json({ message: "No content provided." });
 
-  try {
-    const payload = {
-      contents: [{
-        role: "user",
-        parts: [{ text: storyContent }]
-      }],
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: "Kore" 
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: `Read this story with expression: ${storyContent}` }] }],
+            generationConfig: {
+                responseModalities: ["AUDIO"], //
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: {
+                            voiceName: "Puck" // Options: Aoede, Charon, Fenrir, Kore, Puck
+                        }
+                    }
+                }
             }
-          }
+        };
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        
+        // Error handling if the API fails
+        if (!response.ok) {
+            console.error("Gemini Error Details:", data);
+            return res.status(response.status).json({ message: data.error?.message || "Gemini API error" });
         }
-      }
-    };
 
-    // We use the v1beta endpoint for the TTS preview model
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        const audioPart = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        if (!audioPart) throw new Error("No audio data found in response.");
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Gemini API Error:", data);
-      return res.status(response.status).json({
-        message: "Gemini API Error",
-        details: data.error?.message || "Unknown error"
-      });
+        res.json({
+            audioData: audioPart.inlineData.data,
+            mimeType: audioPart.inlineData.mimeType
+        });
+    } catch (err) {
+        console.error("TTS Route Error:", err.message);
+        res.status(500).json({ message: "Internal server error." });
     }
-
-    const candidate = data.candidates?.[0];
-    if (candidate?.finishReason === "SAFETY") {
-      return res.status(400).json({ message: "Content blocked by safety filters." });
-    }
-
-    const audioPart = candidate?.content?.parts?.find(
-      p => p.inlineData && p.inlineData.mimeType.startsWith("audio/")
-    );
-
-    if (!audioPart) {
-      return res.status(500).json({ message: "No audio data returned." });
-    }
-
-    // Send the base64 and mimeType (which contains the sample rate)
-    res.json({
-      audioData: audioPart.inlineData.data,
-      mimeType: audioPart.inlineData.mimeType
-    });
-
-  } catch (err) {
-    console.error("Server Crash:", err);
-    res.status(500).json({ message: "Internal server error." });
-  }
 });
 app.listen(PORT,()=>{
   console.log(`http://localhost:${PORT}`);
