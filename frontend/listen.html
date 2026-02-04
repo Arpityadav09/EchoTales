@@ -841,7 +841,8 @@
         }
         
        // listen.html - Inside the script tag
-async function togglePlay() {
+       async function togglePlay() {
+    // 1. If currently playing, pause it
     if (isPlaying) {
         if (audioPlayer) audioPlayer.pause();
         isPlaying = false;
@@ -849,7 +850,7 @@ async function togglePlay() {
         return;
     }
 
-    // If audio is already loaded and just paused, simply resume
+    // 2. If audio is already loaded and just paused, simply resume
     if (audioPlayer && audioPlayer.paused && audioPlayer.readyState > 0) {
         audioPlayer.play();
         isPlaying = true;
@@ -858,35 +859,52 @@ async function togglePlay() {
     }
 
     try {
-        showToast("Generating Audio", "Converting story to speech...");
+        // --- STEP A: BROWSER UNLOCK ---
+        // We create the Audio object immediately to prove to the browser 
+        // that this sound is requested by a user click.
+        if (!audioPlayer) {
+            audioPlayer = new Audio();
+        }
+
+        showToast("Generating Audio", "Gemini is narrating your story...");
         
+        // --- STEP B: FETCH DATA ---
         const response = await fetch('/api/generate-tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ storyContent: story.content })
         });
 
-        const { audioData, mimeType } = await response.json();
-        
-        // Extract sample rate (usually 24000) from mimeType
-        const sampleRate = 24000; 
+        if (!response.ok) throw new Error("Server failed to generate audio.");
 
-        // Convert raw data to playable WAV
+        const { audioData } = await response.json();
+        
+        // --- STEP C: PROCESS AUDIO ---
+        // Gemini returns 24kHz raw PCM; we wrap it in a WAV header.
         const pcmBuffer = base64ToArrayBuffer(audioData);
         const pcm16 = new Int16Array(pcmBuffer);
-        const wavBlob = pcmToWav(pcm16, sampleRate);
+        const wavBlob = pcmToWav(pcm16, 24000);
 
-        if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl); // Cleanup memory
+        if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl); // Memory cleanup
         currentAudioUrl = URL.createObjectURL(wavBlob);
         
-        audioPlayer = new Audio(currentAudioUrl);
-        audioPlayer.play();
+        // --- STEP D: SET SOURCE & LISTENERS ---
+        audioPlayer.src = currentAudioUrl;
+
+        // Add the "Ready" listener to fire your message
+        audioPlayer.addEventListener('canplay', () => {
+            showToast("Success", "Your story is ready to play!");
+        }, { once: true }); // Use {once: true} so it doesn't fire on every seek
+
+        // --- STEP E: PLAY ---
+        await audioPlayer.play(); // Use await to catch potential browser blocks
+        
         isPlaying = true;
         updatePlayIcon(true);
-
-        // Sync progress bar
         audioPlayer.ontimeupdate = updateProgress;
+
     } catch (err) {
+        console.error("Playback Error:", err);
         showToast("Error", "Synthesis failed: " + err.message);
     }
 }
@@ -1002,7 +1020,7 @@ function updatePlayIcon(playing) {
     
             setTimeout(() => {
                 toast.classList.remove('show');
-            }, 3000);
+            }, 3500);
         }
     
         // Close dropdown when clicking outside (Copied from explore.html)
